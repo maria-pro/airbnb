@@ -1,0 +1,123 @@
+---
+title: "Paris - stats"
+author: "Maria Prokofieva"
+date: "null"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,   
+                      message = FALSE,
+                      warning = FALSE)
+library(tidyverse)
+library(skimr)
+library(lubridate)
+library(leaflet)
+theme_set(theme_light())
+```
+
+
+
+## Paris - airbnb data
+
+This is the exploratory analysis of Paris data available from [InsideAirBNB](http://insideairbnb.com/get-the-data.html)
+
+
+```{r}
+listingsFull<-read_csv("/Users/e5028514/OneDrive - Victoria University/airbnb/paris/dataParisFull.csv")
+
+
+
+listing<-read_csv("/Users/e5028514/OneDrive - Victoria University/airbnb/paris/dataParisShort.csv")
+
+#neighbours<-read_csv("/Users/e5028514/OneDrive - Victoria University/airbnb/paris/neighboursFull.csv")
+
+#calendar<-read_csv("/Users/e5028514/OneDrive - Victoria University/airbnb/paris/calendarFull.csv")
+```
+
+The data covers the timeframe between
+
+
+Missing values
+
+```{r}
+short<-listingsFull %>%
+  select(host_is_superhost,neighbourhood_group_cleansed,review_scores_rating,host_response_time,name,host_since,zipcode, month, price, property_type)
+
+skim(short)
+
+
+#visna(missingdata,sort="c", mar.col = c("#e06f69","#357b8a"))
+```
+Missing for 
+`host_is_superhost`=`r sum(is.na(missing$host_is_superhost))`
+
+neighbourhood_group_cleansed
+review_scores_rating
+host_response_time
+name
+host_since
+zipcode
+
+
+Changes:
+
+`price`: removed $ in front of the number
+
+`month`: calculated from `last_scraped` to month-year format
+
+Number of listings per month
+
+```{r}
+listingsFull%>%
+  count(month)%>%
+  ggplot(aes(month, n))+
+  geom_point()+
+```
+
+
+```{r}
+
+head(short)
+
+zipPrices <- short %>% 
+  group_by(zipcode, month) %>% 
+  summarise(priceAvr = mean(price, na.rm = TRUE))%>%
+  arrange(desc(priceAvr))
+  
+
+property <-  short %>% 
+  group_by(neighbourhood_group_cleansed, property_type) %>% 
+  count(property_type, sort=TRUE)
+
+head(property)
+#refactor
+
+propertydf <- propertydf %>% filter(property_type %in% c("Apartment","House","Condominium","Townhouse", "Loft"))
+totalproperty<-  listingdf %>% filter(property_type %in% c("Apartment","House","Condominium","Townhouse", "Loft"))%>% group_by(neighbourhood_group_cleansed) %>% summarize(sum = n())
+propertyratio <- merge(propertydf, totalproperty, by="neighbourhood_group_cleansed")
+propertyratio <- propertyratio %>% mutate(ratio = Freq/sum)
+
+```
+
+
+Number of reviews is used as a proxy for demand
+```{r}
+
+calendar <- calendar %>% mutate(booked = ifelse(available=="f", 1, 0))
+groupedCalendar <- calendar %>% group_by(date = date) %>% summarise(totalBooked = sum(booked, na.rm = TRUE), totalListings = n()) %>% mutate(percent_booked = (totalBooked/totalListings)*100)
+calendarHeat(groupedCalendar$date, groupedCalendar$percent_booked, ncolors = 99, color = "g2r", varname="Occupancy (Percentage) by Month")
+
+```
+
+
+```{r}
+```
+
+
+
+
+dataParis$filename1<-str_extract(dirname(dataParis$filename))
+
